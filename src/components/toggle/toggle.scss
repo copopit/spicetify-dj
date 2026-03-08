@@ -1,0 +1,29 @@
+.toggle-btn.toggle-btn-start {
+    background: var(--spice-button-disabled);
+    > div {
+        transform: translateX(0);
+    }
+}
+.toggle-btn.toggle-btn-end {
+    background: var(--spice-button-active);
+    > div {
+        transform: translateX(1.25rem);
+    }
+}
+.toggle-btn {
+    all: unset;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    padding: 2px 0 1px 0;
+    border-radius: 1.5rem;
+    width: 2.625rem;
+
+    > div {
+        transition: transform 75ms ease-out, background-color 150ms ease;
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 100%;
+        background-color: white;
+  }
+}

@@ -1,0 +1,68 @@
+.graph-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    height: 100%;
+    min-height: 0;
+}
+
+.bpm-view {
+    display: flex;
+    flex: 1;
+    gap: 0.25rem;
+    align-items: flex-end;
+}
+
+.bpm-row {
+    all: unset;
+
+    display: flex;
+    align-items: start;
+    max-width: 2.2rem;
+    min-width: 1.5rem;
+    background-color: rgb(37, 35, 35);
+    padding: 0.1rem 0.2rem 0 0.2rem;
+    color: black;
+    font-weight: 700;
+    font-size: 0.85rem;
+
+    > p {
+        margin: 0 auto;
+    }
+}
+
+.diagram {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    gap: 0.15rem;
+    overflow-x: scroll;
+    width: 100%;
+
+    > :first-child {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        padding-right: 0.5rem;
+        position: sticky;
+        left: 0;
+
+        background-color: var(--spice-main);
+    }
+}
+
+.popover-text {
+    background-color: white;
+    color: black;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+}
+
+.separator {
+    width: 1px;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin: 0 0.5rem;
+}

@@ -1,0 +1,27 @@
+{
+  "name": "spicetify-dj",
+  "description": "A Spicetify extension created with @spicetify/creator",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sc": "spicetify-creator",
+    "dev": "spicetify-creator dev",
+    "build": "spicetify-creator build",
+    "lint": "biome check --apply ."
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-tiny-popover": "^8.1.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "@spicemod/creator": "link:../../spicetify-creator",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

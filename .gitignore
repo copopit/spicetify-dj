@@ -1,0 +1,3 @@
+.spicetify
+node_modules
+\033[31m\033[31m error \033[0m\033[0m Cannot detect Spotify location. Please manually set \"spotify_path\" in config-xpui.ini/

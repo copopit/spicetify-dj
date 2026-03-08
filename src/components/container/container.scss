@@ -1,0 +1,21 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    min-width: 0;
+}
+
+.content-wrapper {
+    height: 100%;
+    overflow: hidden;
+}
+
+.drag-handle {
+    height: 6px;
+    width: 100%;
+    background-color: rgb(37, 35, 35);
+    cursor: row-resize;
+}
