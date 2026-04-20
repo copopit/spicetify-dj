@@ -8,7 +8,7 @@ export const Tabs = ({
 }: {
   tabs: { title: string; component: ReactNode }[];
 }) => {
-  const { autoPauseQueueContext, setAutoPauseQueueContext } = useDjSession();
+  const { autoPauseQueueContext, setAutoPauseQueueContext, setQueueHistory } = useDjSession();
   const [activeTab, setActiveTab] = useState(0);
 
   const [collapse, setCollapse] = useState(false);
@@ -39,6 +39,13 @@ export const Tabs = ({
             {title}
           </button>
         ))}
+        <button 
+          type="button" 
+          className="clear-history-button"
+          onClick={() => setQueueHistory([])}
+        >
+          Clear history
+        </button>
         <div className="toggle-settings">
           <p>Auto-pause context</p>
           <Toggle

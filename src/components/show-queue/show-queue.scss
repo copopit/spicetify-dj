@@ -1,6 +1,22 @@
 .show-queue-container {
     display: flex;
-    gap: 2rem;
+    gap: 4rem;
+    justify-content: space-between;
+    max-height: 100%;
+
+    > :first-child {
+        display: flex;
+        gap: 1.5rem;
+        overflow-y: scroll;
+        width: 100%;
+    }
+
+    > :last-child {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 12rem;
+    }
 }
 
 .song-row {

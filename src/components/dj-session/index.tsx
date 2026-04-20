@@ -48,7 +48,11 @@ const hydrateTempo = (rows: TrackRow[]) => {
 
 const getMissingSongBpms = async (tracks: TrackRow[]) => {
   const missingIds = Array.from(
-    new Set(tracks.map((track) => getTrackId(track.uri))),
+    new Set(
+      tracks
+        .filter((v) => v.tempo === undefined)
+        .map((track) => getTrackId(track.uri)),
+    ),
   ).filter((trackId) => trackId && !bpmMap.has(trackId));
   if (missingIds.length === 0) return [] as IndexedTrack[];
 
@@ -100,12 +104,20 @@ export const DjSessionContext = createContext<{
 
 export const DjSession = ({ children }: { children: ReactNode }) => {
   const [autoPauseQueueContext, setAutoPauseQueueContext] = useState(false);
+
   const [queueHistory, setQueueHistory] = useState<TrackRow[]>([]);
   const [queue, setQueue] = useState<TrackRow[]>(getQeueueTracks());
 
   useEffect(() => {
-    const fn = () => {
-      setQueue(getQeueueTracks());
+    const fn = async () => {
+      const tracks = getQeueueTracks();
+
+      const data = await getMissingSongBpms(tracks);
+      data.forEach(({ id, val: { tempo } }) => {
+        if (id) bpmMap.set(id, tempo);
+      });
+
+      setQueue(hydrateTempo(tracks));
     };
 
     Spicetify.Platform.PlayerAPI._events.addListener("queue_update", fn);
@@ -131,30 +143,34 @@ export const DjSession = ({ children }: { children: ReactNode }) => {
     };
   }, [autoPauseQueueContext]);
 
-  useEffect(() => {
-    let isCancelled = false;
+  // useEffect(() => {
+  //   let isCancelled = false;
 
-    void (async () => {
-      try {
-        const data = await getMissingSongBpms([...queueHistory, ...queue]);
-        if (!isCancelled) {
-          data.forEach(({ id, val: { tempo } }) => {
-            if (id) bpmMap.set(id, tempo);
-          });
-          setQueue((prev) => hydrateTempo(prev));
-          setQueueHistory((prev) => hydrateTempo(prev));
-        }
-      } catch (error) {
-        if (!isCancelled) {
-          console.error("Error fetching track data", error);
-        }
-      }
-    })();
+  //   void (async () => {
+  //     // console.log("updated", [...queueHistory, ...queue]);
+  //     try {
+  //       const data = await getMissingSongBpms([
+  //         ...newQueueHistory,
+  //         ...newQueue,
+  //       ]);
+  //       if (!isCancelled) {
+  //         data.forEach(({ id, val: { tempo } }) => {
+  //           if (id) bpmMap.set(id, tempo);
+  //         });
+  //         setQueue((prev) => hydrateTempo(prev));
+  //         setQueueHistory((prev) => hydrateTempo(prev));
+  //       }
+  //     } catch (error) {
+  //       if (!isCancelled) {
+  //         console.error("Error fetching track data", error);
+  //       }
+  //     }
+  //   })();
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [queueHistory, queue]);
+  //   return () => {
+  //     isCancelled = true;
+  //   };
+  // }, [newQueue, newQueueHistory]);
 
   return (
     <DjSessionContext.Provider

@@ -51,20 +51,6 @@ export const GraphView = () => {
     >
       <h2>Graph view</h2>
       <div className="diagram">
-        {/* {queueHistory.map((item) => (
-          <Cylinder key={item.uri} {...item} min={min} max={max} />
-        ))}
-        {queueHistory.length > 0 && <div className="separator" />}
-        {queue.map((item) => (
-          <Cylinder key={item.uri} {...item} min={min} max={max} />
-        ))}
-        {queueHistory.map((item) => (
-          <Cylinder key={item.uri} {...item} min={min} max={max} />
-        ))}
-        {queueHistory.length > 0 && <div className="separator" />}
-        {queue.map((item) => (
-          <Cylinder key={item.uri} {...item} min={min} max={max} />
-        ))} */}
         <div>
           <p>{max}</p>
           <p>{min}</p>

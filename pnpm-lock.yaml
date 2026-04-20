@@ -25,8 +25,8 @@ importers:
         specifier: latest
         version: 2.4.6
       '@spicemod/creator':
-        specifier: link:../../spicetify-creator
-        version: link:../../spicetify-creator
+        specifier: link:../spicetify-creator
+        version: link:../spicetify-creator
       '@types/react':
         specifier: ^18.3.27
         version: 18.3.28

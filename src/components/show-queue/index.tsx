@@ -17,40 +17,76 @@ const millisToDuration = (millis: number | string) => {
 
 export const Test = () => {
   const { queueHistory, queue } = useDjSession();
-
-  const duration = millisToDuration(
-    [...queueHistory, ...queue].reduce((acc, t) => {
+  const songs = [...queueHistory, ...queue];
+  const length = songs.length;
+  const {
+    duration,
+    bpm,
+    lowestBpm,
+    highestBpm,
+    lowestDuration,
+    longestDuration,
+  } = songs.reduce(
+    (acc, t) => {
       const duration = Number.parseInt(t?.duration ?? "0", 10);
-      return acc + duration;
-    }, 0) /
-      (queueHistory.length + queue.length),
+      const bpm = t.tempo ?? 0;
+      return {
+        duration: acc.duration + duration,
+        bpm: acc.bpm + bpm,
+        lowestBpm: Math.min(acc.lowestBpm, bpm),
+        highestBpm: Math.max(acc.highestBpm, bpm),
+        lowestDuration: Math.min(acc.lowestDuration, duration),
+        longestDuration: Math.max(acc.longestDuration, duration),
+      };
+    },
+    {
+      duration: 0,
+      bpm: 0,
+      lowestBpm: Number.MAX_SAFE_INTEGER,
+      highestBpm: 0,
+      lowestDuration: Number.MAX_SAFE_INTEGER,
+      longestDuration: 0,
+    },
   );
+
+  console.log({ duration, bpm, length });
+
+  const averageDuration = millisToDuration(duration / length);
+  const lowestDurationFormatted = millisToDuration(lowestDuration);
+  const longestDurationFormatted = millisToDuration(longestDuration);
+  const averageBpm = Math.floor(bpm / length);
 
   return (
     <div className="show-queue-container">
       <div>
-        <h2>Previous tracks</h2>
-        {queueHistory.map(({ uri, artist_name, title }) => (
-          <div key={uri} className="song-row">
-            {/* <p>{uri}</p> */}
-            <p>{artist_name}</p>
-            <p>{title}</p>
-          </div>
-        ))}
+        <div>
+          <h2>Previous tracks</h2>
+          {queueHistory.map(({ uri, artist_name, title }) => (
+            <div key={uri} className="song-row">
+              {/* <p>{uri}</p> */}
+              <p>{artist_name}</p>
+              <p>{title}</p>
+            </div>
+          ))}
+        </div>
+        <div>
+          <h2>Current tracks</h2>
+          {queue.map(({ uri, artist_name, title }) => (
+            <div key={uri} className="song-row">
+              {/* <p>{uri}</p> */}
+              <p>{artist_name}</p>
+              <p>{title}</p>
+            </div>
+          ))}
+        </div>
       </div>
       <div>
-        <h2>Current tracks</h2>
-        {queue.map(({ uri, artist_name, title }) => (
-          <div key={uri} className="song-row">
-            {/* <p>{uri}</p> */}
-            <p>{artist_name}</p>
-            <p>{title}</p>
-          </div>
-        ))}
-      </div>
-      <div>
-        <h2>Average duration</h2>
-        <p>{`${duration}`}</p>
+        <h2>Averages</h2>
+        <p>{`BPM: ${averageBpm}`}</p>
+        <p>{`Duration: ${averageDuration}`}</p>
+        <h2>Min/max</h2>
+        <p>{`BPM: ${lowestBpm} / ${highestBpm}`}</p>
+        <p>{`Duration: ${lowestDurationFormatted} / ${longestDurationFormatted}`}</p>
       </div>
     </div>
   );
