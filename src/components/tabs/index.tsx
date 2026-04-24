@@ -8,7 +8,12 @@ export const Tabs = ({
 }: {
   tabs: { title: string; component: ReactNode }[];
 }) => {
-  const { autoPauseQueueContext, setAutoPauseQueueContext, setQueueHistory } = useDjSession();
+  const {
+    autoPauseQueueContext,
+    setAutoPauseQueueContext,
+    setQueueHistory,
+    startTime,
+  } = useDjSession();
   const [activeTab, setActiveTab] = useState(0);
 
   const [collapse, setCollapse] = useState(false);
@@ -39,8 +44,8 @@ export const Tabs = ({
             {title}
           </button>
         ))}
-        <button 
-          type="button" 
+        <button
+          type="button"
           className="clear-history-button"
           onClick={() => setQueueHistory([])}
         >

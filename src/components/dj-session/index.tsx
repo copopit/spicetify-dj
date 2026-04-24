@@ -2,7 +2,9 @@ import {
   createContext,
   type Dispatch,
   type ReactNode,
+  useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import type { TrackRow } from "@/types/spicetify-dj";
@@ -100,32 +102,53 @@ export const DjSessionContext = createContext<{
   setQueueHistory: Dispatch<React.SetStateAction<TrackRow[]>>;
   queue: TrackRow[] | [];
   setQueue: Dispatch<React.SetStateAction<TrackRow[]>>;
+  startTime: Date;
+  timer: Date;
 } | null>(null);
 
 export const DjSession = ({ children }: { children: ReactNode }) => {
   const [autoPauseQueueContext, setAutoPauseQueueContext] = useState(false);
 
   const [queueHistory, setQueueHistory] = useState<TrackRow[]>([]);
-  const [queue, setQueue] = useState<TrackRow[]>(getQeueueTracks());
+  const [queue, setQueue] = useState<TrackRow[]>([]);
+
+  const startTime = useMemo(() => new Date(), []);
+
+  const [timer, setTimer] = useState<Date>(new Date());
 
   useEffect(() => {
-    const fn = async () => {
-      const tracks = getQeueueTracks();
+    const t = setInterval(() => setTimer(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
-      const data = await getMissingSongBpms(tracks);
-      data.forEach(({ id, val: { tempo } }) => {
-        if (id) bpmMap.set(id, tempo);
-      });
+  const queueUpdateFn = useCallback(async () => {
+    const tracks = getQeueueTracks();
 
-      setQueue(hydrateTempo(tracks));
-    };
+    const data = await getMissingSongBpms(tracks);
+    data.forEach(({ id, val: { tempo } }) => {
+      if (id) bpmMap.set(id, tempo);
+    });
 
-    Spicetify.Platform.PlayerAPI._events.addListener("queue_update", fn);
+    setQueue(hydrateTempo(tracks));
+  }, []);
+
+  useEffect(() => {
+    void queueUpdateFn();
+  }, [queueUpdateFn]);
+
+  useEffect(() => {
+    Spicetify.Platform.PlayerAPI._events.addListener(
+      "queue_update",
+      queueUpdateFn,
+    );
 
     return () => {
-      Spicetify.Platform.PlayerAPI._events.removeListener("queue_update", fn);
+      Spicetify.Platform.PlayerAPI._events.removeListener(
+        "queue_update",
+        queueUpdateFn,
+      );
     };
-  }, []);
+  }, [queueUpdateFn]);
 
   useEffect(() => {
     const fn = (e?: Event & { data?: { item?: { provider?: string } } }) => {
@@ -181,6 +204,8 @@ export const DjSession = ({ children }: { children: ReactNode }) => {
         setQueueHistory,
         queue,
         setQueue,
+        startTime,
+        timer,
       }}
     >
       {children}
