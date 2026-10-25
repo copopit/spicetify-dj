@@ -102,8 +102,9 @@ export const DjSessionContext = createContext<{
   setQueueHistory: Dispatch<React.SetStateAction<TrackRow[]>>;
   queue: TrackRow[] | [];
   setQueue: Dispatch<React.SetStateAction<TrackRow[]>>;
-  startTime: Date;
-  timer: Date;
+  startTime?: Date;
+  startSession: () => void;
+  timer?: Date;
 } | null>(null);
 
 export const DjSession = ({ children }: { children: ReactNode }) => {
@@ -112,9 +113,9 @@ export const DjSession = ({ children }: { children: ReactNode }) => {
   const [queueHistory, setQueueHistory] = useState<TrackRow[]>([]);
   const [queue, setQueue] = useState<TrackRow[]>([]);
 
-  const startTime = useMemo(() => new Date(), []);
+  const [startTime, setStartTime] = useState<Date>();
 
-  const [timer, setTimer] = useState<Date>(new Date());
+  const [timer, setTimer] = useState<Date>();
 
   useEffect(() => {
     const t = setInterval(() => setTimer(new Date()), 1000);
@@ -205,6 +206,10 @@ export const DjSession = ({ children }: { children: ReactNode }) => {
         queue,
         setQueue,
         startTime,
+        startSession: () => {
+          setStartTime(new Date());
+          setTimer(new Date());
+        },
         timer,
       }}
     >

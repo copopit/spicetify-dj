@@ -1,5 +1,6 @@
 import "./show-queue.scss";
 import { useState } from "react";
+import { Button } from "../button/button";
 import { useDjSession } from "../dj-session/hooks";
 
 const millisToDuration = (millis: number | string) => {
@@ -17,7 +18,8 @@ const millisToDuration = (millis: number | string) => {
 };
 
 export const Test = () => {
-  const { queueHistory, queue, startTime, timer } = useDjSession();
+  const { queueHistory, queue, startTime, startSession, timer } =
+    useDjSession();
   const songs = [...queueHistory, ...queue];
   const length = songs.length;
   const {
@@ -55,34 +57,35 @@ export const Test = () => {
   const longestDurationFormatted = millisToDuration(longestDuration);
   const averageBpm = Math.floor(bpm / length);
 
-  const sessionDuration = millisToDuration(
-    timer.getTime() - startTime.getTime(),
-  );
+  const sessionDuration =
+    timer && startTime
+      ? millisToDuration(timer.getTime() - startTime.getTime())
+      : 0;
 
   const [newPlaylistName, setNewPlaylistName] = useState("");
 
   const handleCreatePlaylist = async () => {
     Spicetify.showNotification(`Creating playlist: ${newPlaylistName}`);
 
-    const rootlistContent = await Spicetify.Platform.RootlistAPI.getContents();
-    let folder = null;
+    // const rootlistContent = await Spicetify.Platform.RootlistAPI.getContents();
+    // let folder = null;
 
-    const djSessionFolder = rootlistContent.folders.find(
-      (f) => f.name === "DJ sessions",
-    );
+    // const djSessionFolder = rootlistContent.folders.find(
+    //   (f) => f.name === "DJ sessions",
+    // );
 
-    if (djSessionFolder) {
-      const currentYear = new Date().getFullYear();
-      folder =
-        djSessionFolder.items.find((f) => f.name === currentYear.toString()) ??
-        (await Spicetify.Platform.RootlistAPI.createFolder(
-          currentYear.toString(),
-          djSessionFolder.uri,
-        ));
-    }
+    // if (djSessionFolder) {
+    //   const currentYear = new Date().getFullYear();
+    //   folder =
+    //     djSessionFolder.items.find((f) => f.name === currentYear.toString()) ??
+    //     (await Spicetify.Platform.RootlistAPI.createFolder(
+    //       currentYear.toString(),
+    //       djSessionFolder.uri,
+    //     ));
+    // }
 
     const playlistRes = await Spicetify.Platform.RootlistAPI.createPlaylist(
-      newPlaylistName.trim() ? newPlaylistName : startTime.toISOString(),
+      newPlaylistName.trim() ? newPlaylistName : startTime?.toISOString(),
       {
         before: "start",
       },
@@ -94,7 +97,12 @@ export const Test = () => {
       typeof playlistRes === "string" ? playlistRes : playlistRes?.uri;
 
     const historyUris = queueHistory.map((t) => t.uri);
-    if (historyUris.length === 0) return;
+    if (historyUris.length === 0) {
+      Spicetify.showNotification(
+        "No tracks in session history to add to playlist",
+      );
+      return;
+    }
 
     await Spicetify.Platform.PlaylistAPI.add(playlistUri, historyUris, {
       after: "end",
@@ -128,7 +136,10 @@ export const Test = () => {
 
       <div>
         <h2>Session duration</h2>
-        <p>{`Start ${startTime.toLocaleTimeString()}`}</p>
+        <Button type="button" onClick={startSession}>
+          Start session
+        </Button>
+        <p>{`Start ${startTime?.toLocaleTimeString() ?? "N/A"}`}</p>
         {/* <p>{`Duration ${timer.getHours() ?? ""}:${timer.getMinutes() ?? ""}:${timer.getSeconds() ?? ""}`}</p> */}
         <p>{`Duration ${sessionDuration}`}</p>
       </div>
@@ -138,14 +149,15 @@ export const Test = () => {
           type="text"
           placeholder="Playlist name"
           defaultValue={newPlaylistName}
+          className="input-tekst"
           onChange={async (e) => {
             const v = e.target.value;
             await setNewPlaylistName(v);
           }}
         />
-        <button type="button" onClick={handleCreatePlaylist}>
+        <Button type="button" onClick={handleCreatePlaylist}>
           Create
-        </button>
+        </Button>
       </div>
       <div>
         <h2>Averages</h2>
