@@ -2,6 +2,7 @@ import "./show-queue.scss";
 import { useState } from "react";
 import { Button } from "../button/button";
 import { useDjSession } from "../dj-session/hooks";
+import { withTrackKeys } from "../dj-session/session-state";
 
 const millisToDuration = (millis: number | string) => {
   const totalSeconds =
@@ -18,7 +19,7 @@ const millisToDuration = (millis: number | string) => {
 };
 
 export const Test = () => {
-  const { queueHistory, queue, startTime, startSession, timer } =
+  const { queueHistory, playedTracks, queue, startTime, startSession, timer } =
     useDjSession();
   const songs = [...queueHistory, ...queue];
   const length = songs.length;
@@ -65,6 +66,14 @@ export const Test = () => {
   const [newPlaylistName, setNewPlaylistName] = useState("");
 
   const handleCreatePlaylist = async () => {
+    const historyUris = playedTracks.map((track) => track.uri);
+    if (historyUris.length === 0) {
+      Spicetify.showNotification(
+        "No tracks in session history to add to playlist",
+      );
+      return;
+    }
+
     Spicetify.showNotification(`Creating playlist: ${newPlaylistName}`);
 
     // const rootlistContent = await Spicetify.Platform.RootlistAPI.getContents();
@@ -96,14 +105,6 @@ export const Test = () => {
     const playlistUri =
       typeof playlistRes === "string" ? playlistRes : playlistRes?.uri;
 
-    const historyUris = queueHistory.map((t) => t.uri);
-    if (historyUris.length === 0) {
-      Spicetify.showNotification(
-        "No tracks in session history to add to playlist",
-      );
-      return;
-    }
-
     await Spicetify.Platform.PlaylistAPI.add(playlistUri, historyUris, {
       after: "end",
     });
@@ -114,18 +115,20 @@ export const Test = () => {
       <div>
         <div>
           <h2>Previous tracks</h2>
-          {queueHistory.map(({ uri, artist_name, title }) => (
-            <div key={uri} className="song-row">
-              {/* <p>{uri}</p> */}
-              <p>{artist_name}</p>
-              <p>{title}</p>
-            </div>
-          ))}
+          {withTrackKeys(queueHistory).map(
+            ({ renderKey, artist_name, title }) => (
+              <div key={`history-${renderKey}`} className="song-row">
+                {/* <p>{uri}</p> */}
+                <p>{artist_name}</p>
+                <p>{title}</p>
+              </div>
+            ),
+          )}
         </div>
         <div>
           <h2>Current tracks</h2>
-          {queue.map(({ uri, artist_name, title }) => (
-            <div key={uri} className="song-row">
+          {withTrackKeys(queue).map(({ renderKey, artist_name, title }) => (
+            <div key={`queue-${renderKey}`} className="song-row">
               {/* <p>{uri}</p> */}
               <p>{artist_name}</p>
               <p>{title}</p>
