@@ -28,7 +28,7 @@ const addTempoDiff = (list: TrackRow[]): (TrackRow & { diff?: number })[] => {
 const getDiffColor = (diff: number | undefined) => {
   if (diff === undefined) return "hsl(0, 0%, 50%)";
 
-  const maxDiff = 10;
+  const maxDiff = 13;
   const normalized = Math.min(Math.max(diff / maxDiff, 0), 1);
   const hue = 120 - normalized * 120;
 
@@ -110,7 +110,7 @@ const Cylinder = ({
           backgroundColor: getDiffColor(diff),
         }}
       >
-        <p>{tempo}</p>
+        <p>{tempo ? Math.round(tempo) : "-"}</p>
       </button>
     </Popover>
   );

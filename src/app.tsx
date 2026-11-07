@@ -2,7 +2,7 @@ import "@/app.scss";
 import { createRoot } from "react-dom/client";
 // you can use aliases too ! (just add them to tsconfig.json)
 // import Onboarding from "@/components/Onboarding";
-import { Test } from "@/components/show-queue";
+import { SessionInfo } from "@/components/show-queue";
 import { Container } from "./components/container";
 import { DjSession } from "./components/dj-session";
 import { GraphView } from "./components/graph-view";
@@ -25,7 +25,7 @@ function main() {
       <Container>
         <Tabs
           tabs={[
-            { title: "Session", component: <Test /> },
+            { title: "Session", component: <SessionInfo /> },
             { title: "Graph", component: <GraphView /> },
           ]}
         />

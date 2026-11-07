@@ -1,32 +1,51 @@
 export type TrackInfo = {
   id: string;
   tempo: number;
-  key?: number;
-  mode?: number;
-  timeSignature?: number;
-  danceability?: number;
-  energy?: number;
-  loudness?: number;
-  valence?: number;
+  /** Note name, e.g. "G#". */
+  key?: string;
+  mode?: "major" | "minor";
+  camelot?: string;
   fetchedAt: number;
 };
 
+type AudioAttributesV2 = {
+  bpm?: number;
+  key?: { key?: string; mode?: number; camelotKey?: { value?: string } };
+} | null;
+
+type MetadataExtensionsAPI = {
+  fetch: (
+    ...requests: [uri: string, ...kinds: number[]][]
+  ) => Promise<Record<string, Record<number, unknown> | undefined>>;
+};
+
 type AudioFeatures = {
-  id?: string;
   tempo?: number;
   key?: number;
   mode?: number;
-  time_signature?: number;
-  danceability?: number;
-  energy?: number;
-  loudness?: number;
-  valence?: number;
 } | null;
 
 const DB_NAME = "spicetify-dj";
-const DB_VERSION = 1;
+// v2: records no longer store the full audio-features payload.
+const DB_VERSION = 2;
 const STORE = "tracks";
 const BATCH_SIZE = 100;
+// Spotify extension_kind enum value; see docs/bpm-sources.md.
+const AUDIO_ATTRIBUTES_V2 = 222;
+const PITCH_CLASSES = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
 const AUDIO_FEATURES_URL =
   "https://spclient.wg.spotify.com/audio-attributes/v1/audio-features";
 const TRACK_ID = /^[0-9A-Za-z]{22}$/;
@@ -48,9 +67,10 @@ const openDb = () => {
   dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(STORE)) {
-        request.result.createObjectStore(STORE, { keyPath: "id" });
+      if (request.result.objectStoreNames.contains(STORE)) {
+        request.result.deleteObjectStore(STORE);
       }
+      request.result.createObjectStore(STORE, { keyPath: "id" });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -90,7 +110,49 @@ const authHeaders = () => ({
   Accept: "application/json",
 });
 
-const toTrackInfo = (
+const fromAudioAttributes = (
+  attributes: AudioAttributesV2,
+  id: string,
+  fetchedAt: number,
+): TrackInfo | undefined => {
+  if (typeof attributes?.bpm !== "number") return undefined;
+  const { key, mode, camelotKey } = attributes.key ?? {};
+  return {
+    id,
+    tempo: attributes.bpm,
+    key,
+    mode: mode === 2 ? "major" : mode === 1 ? "minor" : undefined,
+    camelot: camelotKey?.value,
+    fetchedAt,
+  };
+};
+
+const fetchFromClient = async (ids: string[]) => {
+  const api = (
+    Spicetify.Platform?.PlaylistAPI as
+      | { _metadataExtensionsAPI?: MetadataExtensionsAPI }
+      | undefined
+  )?._metadataExtensionsAPI;
+  if (typeof api?.fetch !== "function") {
+    throw new Error("Metadata extensions API unavailable");
+  }
+
+  const uris = ids.map((id) => `spotify:track:${id}`);
+  const result = await api.fetch(
+    ...uris.map((uri): [string, number] => [uri, AUDIO_ATTRIBUTES_V2]),
+  );
+  const fetchedAt = Date.now();
+
+  return ids.map((id, i) =>
+    fromAudioAttributes(
+      (result[uris[i]]?.[AUDIO_ATTRIBUTES_V2] ?? null) as AudioAttributesV2,
+      id,
+      fetchedAt,
+    ),
+  );
+};
+
+const fromAudioFeatures = (
   features: AudioFeatures,
   id: string,
   fetchedAt: number,
@@ -99,18 +161,14 @@ const toTrackInfo = (
   return {
     id,
     tempo: features.tempo,
-    key: features.key,
-    mode: features.mode,
-    timeSignature: features.time_signature,
-    danceability: features.danceability,
-    energy: features.energy,
-    loudness: features.loudness,
-    valence: features.valence,
+    key: features.key === undefined ? undefined : PITCH_CLASSES[features.key],
+    mode:
+      features.mode === 1 ? "major" : features.mode === 0 ? "minor" : undefined,
     fetchedAt,
   };
 };
 
-const fetchBatch = async (ids: string[]) => {
+const fetchFromAudioFeatures = async (ids: string[]) => {
   const response = await fetch(`${AUDIO_FEATURES_URL}?ids=${ids.join(",")}`, {
     headers: authHeaders(),
   });
@@ -122,9 +180,14 @@ const fetchBatch = async (ids: string[]) => {
 
   // Results are positional; missing tracks come back as null.
   return ids.map((id, i) =>
-    toTrackInfo(body.audio_features?.[i] ?? null, id, fetchedAt),
+    fromAudioFeatures(body.audio_features?.[i] ?? null, id, fetchedAt),
   );
 };
+
+const SOURCES = [
+  { name: "metadata extensions", fetch: fetchFromClient },
+  { name: "audio features", fetch: fetchFromAudioFeatures },
+];
 
 const loadMissing = async (ids: string[]) => {
   const found = new Map<string, TrackInfo>();
@@ -139,21 +202,28 @@ const loadMissing = async (ids: string[]) => {
   const fetched: TrackInfo[] = [];
 
   for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
-    const chunk = toFetch.slice(i, i + BATCH_SIZE);
-    try {
-      const infos = await fetchBatch(chunk);
-      chunk.forEach((id, j) => {
-        const info = infos[j];
-        if (info) {
-          found.set(id, info);
+    let remaining = toFetch.slice(i, i + BATCH_SIZE);
+    let lastFailed = false;
+
+    for (const source of SOURCES) {
+      if (remaining.length === 0) break;
+      try {
+        const infos = await source.fetch(remaining);
+        lastFailed = false;
+        for (const info of infos) {
+          if (!info) continue;
+          found.set(info.id, info);
           fetched.push(info);
-        } else {
-          unavailable.add(id);
         }
-      });
-    } catch (error) {
-      console.error("spicetify-dj: failed to fetch audio features", error);
+        remaining = remaining.filter((id) => !found.has(id));
+      } catch (error) {
+        lastFailed = true;
+        console.warn(`spicetify-dj: ${source.name} lookup failed`, error);
+      }
     }
+
+    // Only give up on tracks the final source answered without data, so errors are retried.
+    if (!lastFailed) for (const id of remaining) unavailable.add(id);
   }
 
   for (const [id, info] of found) cache.set(id, info);
